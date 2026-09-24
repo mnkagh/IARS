@@ -1,0 +1,136 @@
+// IARS Prisma Schema - PostgreSQL primary (swap provider to mongodb for MongoDB)
+// SECURITY: All relations use foreign keys with cascade rules, indexes for lookup
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  // For Mongo: provider = "mongodb" // and change url to mongodb://...
+}
+
+enum Role {
+  USER
+  ADMIN
+  REVIEWER
+}
+
+enum ReadinessStatus {
+  NOT_READY
+  EMERGING
+  MODERATE
+  MATURE
+}
+
+model User {
+  id                String   @id @default(cuid())
+  email             String   @unique
+  password          String   // bcrypt hash, never select unless needed
+  name              String
+  role              Role     @default(USER)
+  isActive          Boolean  @default(true)
+  failedAttempts    Int      @default(0)
+  lockUntil         DateTime?
+  lastLoginAt       DateTime?
+  emailVerified     Boolean  @default(false)
+
+  institutionId     String?
+  institution       Institution? @relation(fields: [institutionId], references: [id])
+
+  assessments       Assessment[]
+  refreshTokens     RefreshToken[]
+  auditLogs         AuditLog[]
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([email])
+  @@index([institutionId])
+}
+
+model Institution {
+  id                String   @id @default(cuid())
+  name              String
+  type              String?  // University, College, School
+  country           String?
+  city              String?
+  website           String?
+  createdById       String?
+  users             User[]
+  assessments       Assessment[]
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([name])
+}
+
+model Assessment {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  institutionId     String?
+  institution       Institution? @relation(fields: [institutionId], references: [id])
+
+  // 8 dimensions (0-100)
+  teacherTraining        Int  // 0-100
+  policyFramework        Int
+  technicalInfra         Int
+  ethicsEducation        Int
+  institutionalSupport   Int
+  budgetAllocation       Int
+  studentAwareness       Int
+  leadershipCommitment   Int
+
+  // Computed
+  rawAverage            Float
+  weightedScore         Float  // ML weighted
+  status                ReadinessStatus
+
+  // Snapshots
+  gapAnalysis           Json   // [{label, score, gap}]
+  recommendations       Json   // string[]
+
+  notes                 String? @db.Text
+  isPublic              Boolean @default(false)
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([userId])
+  @@index([institutionId])
+  @@index([createdAt])
+  @@index([status])
+}
+
+model RefreshToken {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash     String   @unique // SHA256 of token, not raw
+  expiresAt     DateTime
+  revoked       Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  ipAddress     String?
+  userAgent     String?
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@index([expiresAt])
+}
+
+model AuditLog {
+  id            String   @id @default(cuid())
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action        String   // LOGIN, CREATE_ASSESSMENT, etc
+  resource      String?  // assessments:123
+  ipAddress     String?
+  userAgent     String?
+  metadata      Json?
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
