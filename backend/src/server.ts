@@ -5,11 +5,18 @@ import prisma from './lib/prisma';
 
 const PORT = env.PORT;
 
-// Validate DB connection at startup - fail fast if unreachable
+// Validate DB connection at startup - warn but still serve preview if DB unreachable (live demo without postgres)
 async function start() {
   try {
-    await prisma.$connect();
-    logger.info('Database connected');
+    try {
+      await prisma.$connect();
+      logger.info('Database connected');
+    } catch (dbErr: any) {
+      logger.warn('Database not reachable - running in preview-only mode (auth/DB features disabled)', {
+        error: dbErr.message,
+      });
+      logger.warn('Set valid DATABASE_URL and run `npx prisma migrate dev` for full persistence');
+    }
 
     const server = app.listen(PORT, () => {
       logger.info(`IARS backend running on http://localhost:${PORT} [${env.NODE_ENV}]`);
