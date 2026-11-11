@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Chart as ChartJS, BarElement, CategoryScale, LinearScale, Tooltip, Legend } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
 import { api } from '../lib/api';
-import { useTilt } from '../lib/hooks3d';
+import { Rv } from '../lib/reveal';
 
 ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
@@ -28,13 +28,13 @@ const FIELDS = [
   'leadershipCommitment',
 ];
 
-const PALETTE = ['#667eea', '#764ba2', '#14b8a6', '#f59e0b', '#ef4444', '#22c55e', '#ec4899', '#06b6d4'];
+/** Academic series — navy depths, terracotta for the fourth. */
+const SERIES = ['rgba(30,44,70,.92)', 'rgba(61,90,128,.75)', 'rgba(126,144,112,.8)', 'rgba(178,102,63,.9)'];
 
 export default function Comparison() {
   const [items, setItems] = useState<any[]>([]);
   const [sel, setSel] = useState<string[]>([]);
   const [loaded, setLoaded] = useState(false);
-  const tilt = useTilt(5);
 
   useEffect(() => {
     api
@@ -59,10 +59,8 @@ export default function Comparison() {
       datasets: chosen.map((a, ci) => ({
         label: `${a.institution?.name || 'Assessment'} · ${Math.round(a.weightedScore)}`,
         data: FIELDS.map((f) => a[f] ?? 0),
-        backgroundColor: `${PALETTE[ci % PALETTE.length]}bb`,
-        borderColor: PALETTE[ci % PALETTE.length],
-        borderWidth: 1,
-        borderRadius: 6,
+        backgroundColor: SERIES[ci % SERIES.length],
+        borderWidth: 0,
       })),
     }),
     [chosen]
@@ -73,22 +71,22 @@ export default function Comparison() {
       responsive: true,
       maintainAspectRatio: false,
       scales: {
-        x: { ticks: { color: 'rgba(203,213,225,.7)', font: { size: 10 } }, grid: { color: 'rgba(148,163,184,.08)' } },
+        x: { ticks: { color: '#2c3542', font: { size: 9, family: 'Space Grotesk' } }, grid: { color: 'rgba(30,44,70,.07)' } },
         y: {
           beginAtZero: true,
           max: 100,
-          ticks: { stepSize: 25, color: 'rgba(203,213,225,.55)' },
-          grid: { color: 'rgba(148,163,184,.12)' },
+          ticks: { stepSize: 25, color: '#75705f', font: { size: 9, family: 'IBM Plex Mono' } },
+          grid: { color: 'rgba(30,44,70,.09)' },
         },
       },
       plugins: {
-        legend: { labels: { color: '#cbd5e1', boxWidth: 12, font: { size: 10 } } },
+        legend: { labels: { color: '#2c3542', boxWidth: 10, font: { size: 10 } } },
         tooltip: {
-          backgroundColor: 'rgba(2,6,23,.95)',
-          borderColor: 'rgba(102,126,234,.4)',
-          borderWidth: 1,
-          titleColor: '#fff',
-          bodyColor: '#cbd5e1',
+          backgroundColor: '#1e2c46',
+          titleColor: '#fdfaf1',
+          bodyColor: '#c3cbdb',
+          borderWidth: 0,
+          padding: 12,
         },
       },
     }),
@@ -107,83 +105,65 @@ export default function Comparison() {
 
   if (loaded && !items.length) {
     return (
-      <div className="card-3d grid place-items-center py-20 text-center">
-        <span className="text-5xl opacity-40">🗃️</span>
-        <p className="mt-4 text-sm text-slate-400">No assessments available to compare.</p>
-        <Link to="/" className="btn-3d mt-5 !py-2.5 !px-5 !text-xs">
-          Create one
+      <Rv className="sheet-flat py-20 text-center">
+        <p className="metaa">empty shelf</p>
+        <p className="serif text-2xl text-navy mt-3">Nothing to compare yet.</p>
+        <Link to="/" className="btn btn-navy mt-6">
+          File a reading <span className="arr">→</span>
         </Link>
-      </div>
+      </Rv>
     );
   }
 
   return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-black text-white flex items-center gap-2">
-          <span>⚖️</span> Dimensional Comparison
-        </h1>
-        <p className="text-[11px] text-slate-500 mt-1">Select up to four assessments · click a row to toggle</p>
-      </div>
+    <div>
+      <p className="metaa mb-5">select up to four readings — click to toggle</p>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 mb-8">
         {items.map((a, i) => {
           const on = sel.includes(a.id);
           return (
             <button
               key={a.id}
               onClick={() => toggle(a.id)}
-              className="px-3 py-2 rounded-xl text-[11px] font-bold transition border"
+              aria-pressed={on}
+              className="metaa px-4 py-2.5 transition-colors"
               style={{
-                background: on ? `${PALETTE[i % PALETTE.length]}22` : 'rgba(255,255,255,.03)',
-                borderColor: on ? `${PALETTE[i % PALETTE.length]}88` : 'rgba(255,255,255,.08)',
-                color: on ? '#fff' : '#64748b',
+                border: '1px solid',
+                borderColor: on ? '#1e2c46' : 'var(--line)',
+                background: on ? '#1e2c46' : 'transparent',
+                color: on ? '#fdfaf1' : '#75705f',
               }}
             >
-              {on ? '✓ ' : ''}
+              {on ? '◆ ' : '◇ '}
               {a.institution?.name || a.user?.name || `Run #${i + 1}`} · {Math.round(a.weightedScore)}
             </button>
           );
         })}
       </div>
 
-      <div className="scene-3d">
-        <div
-          ref={tilt.ref}
-          onPointerMove={tilt.onPointerMove}
-          onPointerLeave={tilt.onPointerLeave}
-          className="card-3d t3d relative p-6"
-        >
-          <div className="t3d-edge" />
-          <div className="t3d-glare" />
-          {chosen.length ? (
-            <div style={{ height: 380 }}>
-              <Bar data={chart} options={opts} />
-            </div>
-          ) : (
-            <div className="h-64 grid place-items-center text-sm text-slate-500">
-              Select at least one assessment
-            </div>
-          )}
-        </div>
-      </div>
+      <Rv className="sheet-flat p-6 md:p-8">
+        <p className="metaa">dimensional overlay</p>
+        {chosen.length ? (
+          <div style={{ height: 380 }} className="mt-6">
+            <Bar data={chart} options={opts} />
+          </div>
+        ) : (
+          <p className="text-sm py-20 text-center text-inkbl">Select at least one reading</p>
+        )}
+      </Rv>
 
       {best && (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-5">
           {best.map((b, i) => (
-            <div
-              key={b.dim}
-              className="card-3d relative p-4 rise"
-              style={{ animationDelay: `${i * 40}ms` }}
-            >
-              <div className="t3d-edge" />
-              <p className="text-[10px] uppercase tracking-[.16em] text-slate-500">{b.dim}</p>
-              <p className="text-2xl font-black text-white mt-1.5">{b.avg}</p>
-              <div className="bar3d mt-2.5">
+            <Rv key={b.dim} delay={Math.min(i, 5) * 50} className="sheet-flat p-5">
+              <p className="metaa">{b.dim}</p>
+              <p className="serif text-4xl text-navy mt-2">{b.avg}</p>
+              <div className="meter mt-4">
                 <i style={{ width: `${b.avg}%` }} />
               </div>
-              <p className="mt-2 text-[10px] text-slate-500 truncate">lead: {b.leader}</p>
-            </div>
+              <p className="mt-3 font-mono text-[10px] truncate text-[#75705f]">lead — {b.leader}</p>
+            </Rv>
           ))}
         </div>
       )}

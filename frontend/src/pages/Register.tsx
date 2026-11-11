@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/auth';
-import { useTilt } from '../lib/hooks3d';
+import { Rv } from '../lib/reveal';
 
 function scoreStrength(p: string) {
   let s = 0;
@@ -27,7 +27,6 @@ export default function Register() {
   const [busy, setBusy] = useState(false);
   const register = useAuthStore((s) => s.register);
   const navigate = useNavigate();
-  const tilt = useTilt<HTMLFormElement>(8);
 
   const strength = useMemo(() => scoreStrength(form.password), [form.password]);
   const match = form.password === form.confirmPassword;
@@ -43,88 +42,65 @@ export default function Register() {
     try {
       await register(form);
       navigate('/login');
-    } catch (e: any) {
-      const d = e.response?.data;
+    } catch (e: unknown) {
+      const d = (e as { response?: { data?: { error?: string; details?: { message?: string }[] } } }).response?.data;
       setErr(d?.error || d?.details?.[0]?.message || 'Registration failed');
     } finally {
       setBusy(false);
     }
   };
 
-  const field =
-    'w-full px-4 py-3 rounded-xl bg-slate-900/70 border border-white/10 text-white text-sm placeholder:text-slate-600 outline-none focus:border-[#667eea] focus:ring-2 focus:ring-[#667eea]/30 transition';
-
   return (
-    <div className="grid place-items-center py-8">
-      <div className="scene-3d w-full max-w-[460px]">
-        <form
-          onSubmit={submit}
-          ref={tilt.ref}
-          onPointerMove={tilt.onPointerMove}
-          onPointerLeave={tilt.onPointerLeave}
-          className="card-3d t3d t3d--lift relative p-8"
-        >
-          <div className="t3d-edge" />
-          <div className="t3d-glare" />
+    <Rv className="max-w-[480px] mx-auto sheet p-8 md:p-10">
+      <p className="metaa">matriculation</p>
+      <h2 className="serif text-3xl text-navy mt-3">Join the institute.</h2>
+      <p className="text-[13px] mt-2 text-inkbl">Password rules are enforced server-side before bcrypt cost 12.</p>
 
-          <div className="text-center mb-6">
-            <div className="w-14 h-14 mx-auto grid place-items-center rounded-2xl bg-gradient-to-br from-[#764ba2] to-[#667eea] text-2xl shadow-lg shadow-[#764ba2]/30 float">
-              ✍️
-            </div>
-            <h1 className="mt-4 text-2xl font-black text-white">Create your account</h1>
-            <p className="text-xs text-slate-400 mt-1">Password rules are enforced server-side with bcrypt cost 12</p>
+      <form onSubmit={submit} className="mt-8 space-y-4">
+        <input value={form.name} onChange={set('name')} placeholder="Full name" required className="field" aria-label="Full name" />
+        <input value={form.email} onChange={set('email')} type="email" placeholder="Email address" required className="field" aria-label="Email address" />
+        <input value={form.institutionName} onChange={set('institutionName')} placeholder="Institution (optional)" className="field" aria-label="Institution" />
+        <input value={form.password} onChange={set('password')} type="password" placeholder="Password" required className="field" aria-label="Password" />
+        <input value={form.confirmPassword} onChange={set('confirmPassword')} type="password" placeholder="Confirm password" required className="field" aria-label="Confirm password" />
+
+        <div className="pt-2">
+          <div className="flex items-center justify-between mb-2">
+            <span className="metaa">Strength</span>
+            <span className="font-mono text-[11px] text-[#75705f]">{strength}/5</span>
           </div>
-
-          <div className="space-y-3">
-            <input {...set('name')} placeholder="Full name" required className={field} />
-            <input {...set('email')} type="email" placeholder="Email address" required className={field} />
-            <input {...set('institutionName')} placeholder="Institution (optional)" className={field} />
-            <input {...set('password')} type="password" placeholder="Password" required className={field} />
-            <input {...set('confirmPassword')} type="password" placeholder="Confirm password" required className={field} />
+          <div className="meter mb-3">
+            <i style={{ width: `${(strength / 5) * 100}%` }} className={strength === 5 ? 'sage' : ''} />
           </div>
-
-          <div className="mt-4 rounded-xl bg-black/25 border border-white/5 p-4">
-            <div className="flex items-center justify-between mb-2.5">
-              <span className="text-[10px] font-black uppercase tracking-[.2em] text-slate-500">Strength</span>
-              <span className="text-[10px] font-mono text-slate-400">{strength}/5</span>
-            </div>
-            <div className="bar3d mb-3">
-              <i style={{ width: `${(strength / 5) * 100}%` }} />
-            </div>
-            <div className="grid grid-cols-2 gap-1.5">
-              {RULES.map(([label, ok]) => (
-                <span
-                  key={label}
-                  className="text-[10px] flex items-center gap-1.5"
-                  style={{ color: ok(form.password) ? '#86efac' : '#64748b' }}
-                >
-                  <b>{ok(form.password) ? '✓' : '○'}</b> {label}
-                </span>
-              ))}
-            </div>
-            {form.confirmPassword && !match && (
-              <p className="mt-2.5 text-[10px] text-red-300">Passwords do not match</p>
-            )}
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+            {RULES.map(([label, ok]) => (
+              <span key={label} className="font-mono text-[10px] flex items-center gap-2" style={{ color: ok(form.password) ? '#1e2c46' : '#a39c88' }}>
+                <span className={ok(form.password) ? 'tick' : 'tick-hollow'} style={ok(form.password) ? undefined : { borderColor: '#a39c88' }} />
+                {label}
+              </span>
+            ))}
           </div>
-
-          {err && (
-            <p className="mt-4 text-xs text-red-300 bg-red-500/10 border border-red-400/30 rounded-xl px-4 py-2.5">
-              {err}
-            </p>
+          {form.confirmPassword && !match && (
+            <p className="mt-2 font-mono text-[10px] text-wine">Passwords do not match</p>
           )}
+        </div>
 
-          <button type="submit" className="btn-3d w-full mt-6" disabled={!canSubmit || busy}>
-            {busy ? '⏳ Creating…' : '→ Create account'}
-          </button>
-
-          <p className="mt-5 text-center text-xs text-slate-400">
-            Already registered?{' '}
-            <Link to="/login" className="text-[#a5b4fc] font-bold hover:text-[#c7d2fe]">
-              Sign in
-            </Link>
+        {err && (
+          <p className="font-mono text-[11px] px-4 py-3" style={{ border: '1px solid rgba(125,59,71,.5)', color: '#7d3b47' }} role="alert">
+            {err}
           </p>
-        </form>
-      </div>
-    </div>
+        )}
+
+        <button type="submit" className="btn btn-navy w-full" disabled={!canSubmit || busy}>
+          {busy ? 'Enrolling…' : 'Create account'} <span className="arr">→</span>
+        </button>
+      </form>
+
+      <p className="text-[12px] mt-6 text-center text-inkbl">
+        Already matriculated?{' '}
+        <Link to="/login" className="underline underline-offset-4 text-navy">
+          Sign in
+        </Link>
+      </p>
+    </Rv>
   );
 }

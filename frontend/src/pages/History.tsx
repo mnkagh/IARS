@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
-import { useTilt } from '../lib/hooks3d';
+import { Rv } from '../lib/reveal';
 
-const STATUS_COLOR: Record<string, string> = {
-  NOT_READY: '#ef4444',
-  EMERGING: '#f59e0b',
-  MODERATE: '#14b8a6',
-  MATURE: '#22c55e',
+const BAND: Record<string, string> = {
+  NOT_READY: '#7d3b47',
+  EMERGING: '#a88420',
+  MODERATE: '#3d5a80',
+  MATURE: '#5c7350',
 };
 
 export default function History() {
@@ -15,7 +15,6 @@ export default function History() {
   const [page, setPage] = useState(1);
   const [busy, setBusy] = useState(false);
   const [view, setView] = useState<'table' | 'cards'>('table');
-  const tilt = useTilt(5);
 
   const load = useCallback(async () => {
     setBusy(true);
@@ -42,148 +41,105 @@ export default function History() {
   const items: any[] = data?.items || [];
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-black text-white flex items-center gap-2">
-            <span>🗂️</span> Assessment History
-          </h1>
-          <p className="text-[11px] text-slate-500 mt-1">
-            {data ? `${data.total} records · owner-scoped via RBAC` : 'loading…'}
-          </p>
-        </div>
-        <div className="flex gap-1 rounded-xl bg-white/5 border border-white/10 p-1 text-[11px]">
+    <div>
+      <div className="flex flex-wrap items-end justify-between gap-4 mb-8">
+        <p className="font-mono text-[11px] text-[#75705f]">
+          {data ? `${data.total} records · owner-scoped via RBAC` : 'retrieving…'}
+        </p>
+        <div className="tabs" role="tablist" aria-label="View">
           {(['table', 'cards'] as const).map((v) => (
-            <button
-              key={v}
-              onClick={() => setView(v)}
-              className="px-3 py-1.5 rounded-lg transition font-bold"
-              style={{
-                background: view === v ? 'linear-gradient(135deg,#667eea,#764ba2)' : 'transparent',
-                color: view === v ? '#fff' : '#64748b',
-              }}
-            >
+            <button key={v} role="tab" aria-selected={view === v} onClick={() => setView(v)}>
               {v}
             </button>
           ))}
         </div>
       </div>
 
-      {busy && <div className="h-1 w-full rounded-full bg-white/5 overflow-hidden"><i className="block h-full w-1/3 bg-[#667eea] animate-pulse" /></div>}
+      {busy && (
+        <div className="h-px w-full mb-6 rule" aria-hidden="true">
+          <i className="block h-full w-1/3 skel" />
+        </div>
+      )}
 
       {!items.length ? (
-        <div className="card-3d grid place-items-center py-20 text-center">
-          <span className="text-5xl opacity-40">📭</span>
-          <p className="mt-4 text-sm text-slate-400">Nothing recorded yet.</p>
-          <Link to="/" className="btn-3d mt-5 !py-2.5 !px-5 !text-xs">
-            Run your first assessment
+        <Rv className="sheet-flat py-20 text-center">
+          <p className="metaa">empty shelf</p>
+          <p className="serif text-2xl text-navy mt-3">Nothing filed yet.</p>
+          <Link to="/" className="btn btn-navy mt-6">
+            Run the first reading <span className="arr">→</span>
           </Link>
-        </div>
+        </Rv>
       ) : view === 'table' ? (
-        <div className="scene-3d">
-          <div
-            ref={tilt.ref}
-            onPointerMove={tilt.onPointerMove}
-            onPointerLeave={tilt.onPointerLeave}
-            className="card-3d t3d relative overflow-hidden"
-          >
-            <div className="t3d-edge" />
-            <div className="overflow-x-auto">
-              <table className="w-full text-[13px] min-w-[640px]">
-                <thead>
-                  <tr className="text-[10px] uppercase tracking-[.16em] text-slate-500 border-b border-white/10">
-                    <th className="text-left font-black px-5 py-3">Created</th>
-                    <th className="font-black px-5 py-3">Score</th>
-                    <th className="font-black px-5 py-3">Stage</th>
-                    <th className="text-left font-black px-5 py-3">Institution</th>
-                    <th className="font-black px-5 py-3 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((a) => (
-                    <tr key={a.id} className="border-b border-white/5 hover:bg-white/[.03] transition">
-                      <td className="px-5 py-3.5 text-slate-400 font-mono text-[11px]">
-                        {new Date(a.createdAt).toLocaleString()}
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span className="font-black text-white text-base">{a.weightedScore}</span>
-                        <span className="text-slate-600 text-[11px]"> /100</span>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span
-                          className="px-2.5 py-1 rounded-full text-[10px] font-black tracking-wide"
-                          style={{ background: `${STATUS_COLOR[a.status]}22`, color: STATUS_COLOR[a.status] }}
-                        >
-                          {a.status.replace('_', ' ')}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5 text-slate-400">{a.institution?.name || '—'}</td>
-                      <td className="px-5 py-3.5 text-right">
-                        <button
-                          onClick={() => remove(a.id)}
-                          className="text-[11px] font-bold text-slate-500 hover:text-red-300 px-2 py-1 rounded-lg hover:bg-red-500/10 transition"
-                        >
-                          delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
+        <Rv className="sheet-flat overflow-x-auto">
+          <table className="acad-table min-w-[640px]">
+            <thead>
+              <tr>
+                <th>Created</th>
+                <th>Score</th>
+                <th>Stage</th>
+                <th>Institution</th>
+                <th style={{ textAlign: 'right' }}>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((a) => (
+                <tr key={a.id} className="arch-row">
+                  <td className="font-mono text-[11px] text-[#75705f]">
+                    {new Date(a.createdAt).toLocaleString()}
+                  </td>
+                  <td>
+                    <span className="serif text-2xl text-navy">{a.weightedScore}</span>
+                    <span className="font-mono text-[10px] text-[#a39c88]"> /100</span>
+                  </td>
+                  <td>
+                    <span className="metaa" style={{ color: BAND[a.status] ?? '#1e2c46' }}>
+                      {a.status.replace('_', ' ')}
+                    </span>
+                  </td>
+                  <td className="text-[13px] text-inkbl">{a.institution?.name || '—'}</td>
+                  <td style={{ textAlign: 'right' }}>
+                    <button onClick={() => remove(a.id)} className="metaa hover:text-navy transition-colors">
+                      delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Rv>
       ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {items.map((a, i) => (
-            <div
-              key={a.id}
-              className="card-3d t3d rise relative p-5"
-              style={{ animationDelay: `${i * 45}ms` }}
-            >
-              <div className="t3d-edge" />
+            <Rv key={a.id} delay={Math.min(i, 5) * 50} className="sheet-flat p-6">
               <div className="flex items-start justify-between">
-                <span
-                  className="text-3xl font-black"
-                  style={{ color: STATUS_COLOR[a.status], textShadow: `0 0 24px ${STATUS_COLOR[a.status]}66` }}
-                >
-                  {a.weightedScore}
-                </span>
-                <span className="text-[10px] text-slate-600 font-mono">
+                <span className="serif text-5xl text-navy">{a.weightedScore}</span>
+                <span className="font-mono text-[10px] text-[#a39c88]">
                   {new Date(a.createdAt).toLocaleDateString()}
                 </span>
               </div>
-              <p className="mt-3 text-[11px] text-slate-500">{a.institution?.name || 'Unlinked institution'}</p>
-              <div className="flex items-center justify-between mt-4">
-                <span className="text-[10px] font-black" style={{ color: STATUS_COLOR[a.status] }}>
+              <p className="text-[12px] mt-3 text-inkbl">{a.institution?.name || 'Unlinked institution'}</p>
+              <div className="flex items-center justify-between mt-5 pt-4 rule">
+                <span className="metaa" style={{ color: BAND[a.status] ?? '#1e2c46' }}>
                   {a.status.replace('_', ' ')}
                 </span>
-                <button onClick={() => remove(a.id)} className="text-[10px] text-slate-600 hover:text-red-300">
+                <button onClick={() => remove(a.id)} className="metaa hover:text-navy transition-colors">
                   delete
                 </button>
               </div>
-            </div>
+            </Rv>
           ))}
         </div>
       )}
 
       {data && data.totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <button
-            disabled={page <= 1}
-            onClick={() => setPage((p) => p - 1)}
-            className="btn-3d btn-3d--ghost !py-2 !px-4 !text-xs !rounded-xl !shadow-[0_6px_0_rgba(255,255,255,.07)]"
-          >
+        <div className="flex items-center justify-between mt-8">
+          <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="btn btn-line">
             ← Prev
           </button>
-          <span className="text-[11px] font-mono text-slate-500">
-            page {data.page} / {data.totalPages}
+          <span className="font-mono text-[11px] text-[#75705f]">
+            folio {data.page} / {data.totalPages}
           </span>
-          <button
-            disabled={page >= data.totalPages}
-            onClick={() => setPage((p) => p + 1)}
-            className="btn-3d btn-3d--ghost !py-2 !px-4 !text-xs !rounded-xl !shadow-[0_6px_0_rgba(255,255,255,.07)]"
-          >
+          <button disabled={page >= data.totalPages} onClick={() => setPage((p) => p + 1)} className="btn btn-line">
             Next →
           </button>
         </div>
