@@ -1,0 +1,58 @@
+import { z } from 'zod';
+declare const envSchema: z.ZodObject<{
+    NODE_ENV: z.ZodDefault<z.ZodEnum<["development", "production", "test"]>>;
+    PORT: z.ZodDefault<z.ZodNumber>;
+    DATABASE_URL: z.ZodString;
+    JWT_ACCESS_SECRET: z.ZodString;
+    JWT_REFRESH_SECRET: z.ZodString;
+    JWT_ACCESS_EXPIRES_IN: z.ZodDefault<z.ZodString>;
+    JWT_REFRESH_EXPIRES_IN: z.ZodDefault<z.ZodString>;
+    BCRYPT_ROUNDS: z.ZodDefault<z.ZodNumber>;
+    CORS_ORIGIN: z.ZodDefault<z.ZodString>;
+    COOKIE_SECRET: z.ZodOptional<z.ZodString>;
+    RATE_LIMIT_WINDOW_MS: z.ZodDefault<z.ZodNumber>;
+    RATE_LIMIT_MAX: z.ZodDefault<z.ZodNumber>;
+    AUTH_RATE_LIMIT_MAX: z.ZodDefault<z.ZodNumber>;
+    LOG_LEVEL: z.ZodDefault<z.ZodEnum<["error", "warn", "info", "debug"]>>;
+    FRONTEND_URL: z.ZodOptional<z.ZodString>;
+    HELMET_CSP_ENABLED: z.ZodOptional<z.ZodString>;
+}, "strip", z.ZodTypeAny, {
+    NODE_ENV: "development" | "production" | "test";
+    PORT: number;
+    DATABASE_URL: string;
+    JWT_ACCESS_SECRET: string;
+    JWT_REFRESH_SECRET: string;
+    JWT_ACCESS_EXPIRES_IN: string;
+    JWT_REFRESH_EXPIRES_IN: string;
+    BCRYPT_ROUNDS: number;
+    CORS_ORIGIN: string;
+    RATE_LIMIT_WINDOW_MS: number;
+    RATE_LIMIT_MAX: number;
+    AUTH_RATE_LIMIT_MAX: number;
+    LOG_LEVEL: "error" | "warn" | "info" | "debug";
+    COOKIE_SECRET?: string | undefined;
+    FRONTEND_URL?: string | undefined;
+    HELMET_CSP_ENABLED?: string | undefined;
+}, {
+    DATABASE_URL: string;
+    JWT_ACCESS_SECRET: string;
+    JWT_REFRESH_SECRET: string;
+    NODE_ENV?: "development" | "production" | "test" | undefined;
+    PORT?: number | undefined;
+    JWT_ACCESS_EXPIRES_IN?: string | undefined;
+    JWT_REFRESH_EXPIRES_IN?: string | undefined;
+    BCRYPT_ROUNDS?: number | undefined;
+    CORS_ORIGIN?: string | undefined;
+    COOKIE_SECRET?: string | undefined;
+    RATE_LIMIT_WINDOW_MS?: number | undefined;
+    RATE_LIMIT_MAX?: number | undefined;
+    AUTH_RATE_LIMIT_MAX?: number | undefined;
+    LOG_LEVEL?: "error" | "warn" | "info" | "debug" | undefined;
+    FRONTEND_URL?: string | undefined;
+    HELMET_CSP_ENABLED?: string | undefined;
+}>;
+type Env = z.infer<typeof envSchema>;
+declare let env: Env;
+export { env };
+export default env;
+//# sourceMappingURL=env.d.ts.map
